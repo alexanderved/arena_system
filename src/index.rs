@@ -1,36 +1,25 @@
 use std::convert;
-use std::marker::PhantomData;
 
-#[derive(Debug)]
-pub struct Index<T> {
+#[derive(Debug, Clone, Copy)]
+pub struct Index {
     index: usize,
-    _p: PhantomData<T>,
 }
 
-impl<T> Index<T> {
+impl Index {
     pub fn new(index: usize) -> Self {
         Self {
-            index,
-            _p: PhantomData,
+            index
         }
     }
 }
 
-impl<T> Clone for Index<T> {
-    fn clone(&self) -> Self {
-        Self::new(self.index)
-    }
-}
-
-impl<T> Copy for Index<T> {}
-
-impl<T> convert::Into<usize> for Index<T> {
+impl convert::Into<usize> for Index {
     fn into(self) -> usize {
         self.index
     }
 }
 
-impl<T> convert::From<usize> for Index<T> {
+impl convert::From<usize> for Index {
     fn from(index: usize) -> Self {
         Self::new(index)
     }

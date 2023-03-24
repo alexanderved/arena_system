@@ -19,7 +19,7 @@ impl<T> Arena<T> {
 
     pub fn handle<'arena, H: Handle<'arena, Type = T>>(
         &'arena self,
-        index: Index<T>,
+        index: Index,
         userdata: H::Userdata,
     ) -> H {
         let raw_handle = RawHandle::new(self, index);
@@ -27,11 +27,11 @@ impl<T> Arena<T> {
         H::from_raw(raw_handle, userdata)
     }
 
-    pub(crate) fn try_borrow(&self, index: Index<T>) -> Option<ElementRef<'_, T>> {
+    pub(crate) fn try_borrow(&self, index: Index) -> Option<ElementRef<'_, T>> {
         self.data.try_borrow(index.into()).ok()
     }
 
-    pub(crate) fn try_borrow_mut(&self, index: Index<T>) -> Option<ElementRefMut<'_, T>> {
+    pub(crate) fn try_borrow_mut(&self, index: Index) -> Option<ElementRefMut<'_, T>> {
         self.data.try_borrow_mut(index.into()).ok()
     }
 }
