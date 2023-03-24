@@ -25,7 +25,7 @@ pub trait Handle<'arena>
         self.as_raw().arena()
     }
 
-    fn index(&self) -> Index {
+    fn index(&self) -> Index<Self::Type> {
         self.as_raw().index()
     }
 }
@@ -33,7 +33,7 @@ pub trait Handle<'arena>
 #[derive(Debug)]
 pub struct RawHandle<'arena, T> {
     arena: &'arena Arena<T>,
-    index: Index,
+    index: Index<T>,
 }
 
 impl<'arena, T> RawHandle<'arena, T> {
@@ -49,11 +49,11 @@ impl<'arena, T> RawHandle<'arena, T> {
         self.arena
     }
 
-    pub fn index(&self) -> Index {
+    pub fn index(&self) -> Index<T> {
         self.index
     }
 
-    pub(crate) fn new(arena: &'arena Arena<T>, index: Index) -> Self {
+    pub(crate) fn new(arena: &'arena Arena<T>, index: Index<T>) -> Self {
         Self { arena, index }
     }
 }
