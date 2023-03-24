@@ -1,28 +1,17 @@
 use arena_system::*;
 
+#[derive(Debug)]
 struct I32Handle<'arena> {
     raw: RawHandle<'arena, i32>,
-
-    neighbours: Vec<Index>,
-}
-
-impl<'arena> I32Handle<'arena> {
-    fn get_neighbours(&self) -> Vec<I32Handle<'arena>> {
-        self.neighbours
-            .iter()
-            .map(|index| self.arena().handle(*index, self.neighbours.clone()))
-            .collect()
-    }
 }
 
 impl<'arena> Handle<'arena> for I32Handle<'arena> {
     type Type = i32;
-    type Userdata = Vec<Index>;
+    type Userdata = ();
 
-    fn from_raw(raw: RawHandle<'arena, Self::Type>, userdata: Self::Userdata) -> I32Handle<'arena> {
+    fn from_raw(raw: RawHandle<'arena, Self::Type>, _userdata: Self::Userdata) -> I32Handle<'arena> {
         Self {
             raw,
-            neighbours: userdata
         }
     }
 
@@ -36,5 +25,8 @@ impl<'arena> Handle<'arena> for I32Handle<'arena> {
 }
 
 fn main() {
+    let arena: Arena<i32> = Arena::from(vec![0, 1, 2, 3, 4, 5]);
+    let handle: I32Handle = arena.handle(1.into(), ());
 
+    println!("{:#?}", handle);
 }

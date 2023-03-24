@@ -30,6 +30,7 @@ pub trait Handle<'arena>
     }
 }
 
+#[derive(Debug)]
 pub struct RawHandle<'arena, T> {
     arena: &'arena Arena<T>,
     index: Index,

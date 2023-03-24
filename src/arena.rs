@@ -1,8 +1,11 @@
 use crate::Index;
 use crate::{Handle, RawHandle};
 
+use std::convert;
+
 use vec_cell::{ElementRef, ElementRefMut, VecCell};
 
+#[derive(Debug)]
 pub struct Arena<T> {
     data: VecCell<T>,
 }
@@ -30,5 +33,13 @@ impl<T> Arena<T> {
 
     pub(crate) fn try_borrow_mut(&self, index: Index) -> Option<ElementRefMut<'_, T>> {
         self.data.try_borrow_mut(index.into()).ok()
+    }
+}
+
+impl<T> convert::From<Vec<T>> for Arena<T> {
+    fn from(data: Vec<T>) -> Self {
+        Self {
+            data: data.into(),
+        }
     }
 }

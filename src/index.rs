@@ -18,3 +18,9 @@ impl convert::Into<usize> for Index {
         self.index
     }
 }
+
+impl convert::From<usize> for Index {
+    fn from(index: usize) -> Self {
+        Self::new(index)
+    }
+}
