@@ -1,6 +1,6 @@
 use crate::Index;
 use crate::{Handle, RawHandle};
-use crate::error::ArenaResult;
+use crate::error::{ArenaResult, ArenaError};
 
 use vec_cell::{ElementRef, ElementRefMut, VecCell};
 
@@ -36,10 +36,18 @@ impl<T> Arena<T> {
     }
 
     pub(crate) fn try_borrow(&self, index: Index) -> ArenaResult<ElementRef<'_, Option<T>>> {
+        if index.is_invalid() {
+            return Err(ArenaError::InvalidIndex);
+        }
+
         Ok(self.data.try_borrow(index.into())?)
     }
 
     pub(crate) fn try_borrow_mut(&self, index: Index) -> ArenaResult<ElementRefMut<'_, Option<T>>> {
+        if index.is_invalid() {
+            return Err(ArenaError::InvalidIndex);
+        }
+        
         Ok(self.data.try_borrow_mut(index.into())?)
     }
 }
