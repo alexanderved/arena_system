@@ -1,10 +1,12 @@
+use crate::error::ArenaResult;
 use crate::Arena;
 use crate::Index;
 
 use vec_cell::{ElementRef, ElementRefMut};
 
 pub trait Handle<'arena>
-    where Self: 'arena
+where
+    Self: 'arena,
 {
     type Type;
     type Userdata;
@@ -13,11 +15,11 @@ pub trait Handle<'arena>
     fn as_raw(&self) -> &RawHandle<'arena, Self::Type>;
     fn as_mut_raw(&mut self) -> &mut RawHandle<'arena, Self::Type>;
 
-    fn get(&self) -> Option<ElementRef<'arena, Option<Self::Type>>> {
+    fn get(&self) -> ArenaResult<ElementRef<'arena, Option<Self::Type>>> {
         self.as_raw().get()
     }
 
-    fn get_mut(&mut self) -> Option<ElementRefMut<'arena, Option<Self::Type>>> {
+    fn get_mut(&mut self) -> ArenaResult<ElementRefMut<'arena, Option<Self::Type>>> {
         self.as_mut_raw().get_mut()
     }
 
@@ -37,23 +39,40 @@ pub struct RawHandle<'arena, T> {
 }
 
 impl<'arena, T> RawHandle<'arena, T> {
-    pub fn get(&self) -> Option<ElementRef<'arena, Option<T>>> {
-        self.arena.try_borrow(self.index)
+    pub(crate) fn new(arena: &'arena Arena<T>, index: Index) -> Self {
+        Self { arena, index }
+    }
+}
+
+impl<'arena, T> Handle<'arena> for RawHandle<'arena, T> {
+    type Type = T;
+    type Userdata = ();
+
+    fn from_raw(raw: RawHandle<'arena, Self::Type>, _userdata: Self::Userdata) -> Self {
+        raw
     }
 
-    pub fn get_mut(&mut self) -> Option<ElementRefMut<'arena, Option<T>>> {
-        self.arena.try_borrow_mut(self.index)
+    fn as_raw(&self) -> &RawHandle<'arena, Self::Type> {
+        self
     }
 
-    pub fn arena(&self) -> &'arena Arena<T> {
+    fn as_mut_raw(&mut self) -> &mut RawHandle<'arena, Self::Type> {
+        self
+    }
+
+    fn get(&self) -> ArenaResult<ElementRef<'arena, Option<Self::Type>>> {
+        self.arena().try_borrow(self.index())
+    }
+
+    fn get_mut(&mut self) -> ArenaResult<ElementRefMut<'arena, Option<Self::Type>>> {
+        self.arena().try_borrow_mut(self.index())
+    }
+
+    fn arena(&self) -> &'arena Arena<Self::Type> {
         self.arena
     }
 
-    pub fn index(&self) -> Index {
+    fn index(&self) -> Index {
         self.index
-    }
-
-    pub(crate) fn new(arena: &'arena Arena<T>, index: Index) -> Self {
-        Self { arena, index }
     }
 }

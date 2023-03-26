@@ -1,22 +1,18 @@
 use crate::Index;
 use crate::{Handle, RawHandle};
-
-use std::cell::RefCell;
+use crate::error::ArenaResult;
 
 use vec_cell::{ElementRef, ElementRefMut, VecCell};
 
 #[derive(Debug)]
 pub struct Arena<T> {
     data: VecCell<Option<T>>,
-    free: RefCell<Vec<usize>>,
+    free: Vec<Index>,
 }
 
 impl<T> Arena<T> {
     pub fn new() -> Self {
-        Self {
-            data: VecCell::new(),
-            free: RefCell::new(vec![]),
-        }
+        Self { data: VecCell::new(), free: vec![] }
     }
 
     pub fn handle<'arena, H: Handle<'arena, Type = T>>(
@@ -30,14 +26,20 @@ impl<T> Arena<T> {
     }
 
     pub fn add(&mut self, value: T) {
-        self.data.push(Some(value));
-    }   
-
-    pub(crate) fn try_borrow(&self, index: Index) -> Option<ElementRef<'_, Option<T>>> {
-        self.data.try_borrow(index.into()).ok()
+        match self.free.pop() {
+            Some(free_index) => {
+                let mut free_place = self.data.borrow_mut(free_index.into());
+                *free_place = Some(value);
+            },
+            None => self.data.push(Some(value)),
+        }
     }
 
-    pub(crate) fn try_borrow_mut(&self, index: Index) -> Option<ElementRefMut<'_, Option<T>>> {
-        self.data.try_borrow_mut(index.into()).ok()
+    pub(crate) fn try_borrow(&self, index: Index) -> ArenaResult<ElementRef<'_, Option<T>>> {
+        Ok(self.data.try_borrow(index.into())?)
+    }
+
+    pub(crate) fn try_borrow_mut(&self, index: Index) -> ArenaResult<ElementRefMut<'_, Option<T>>> {
+        Ok(self.data.try_borrow_mut(index.into())?)
     }
 }

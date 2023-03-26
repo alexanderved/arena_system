@@ -1,6 +1,7 @@
 pub mod index;
 pub mod handle;
 pub mod arena;
+pub mod error;
 
 pub use index::*;
 pub use handle::*;
