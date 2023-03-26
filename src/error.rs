@@ -9,5 +9,7 @@ pub enum ArenaError {
     #[error("failed to borrow element: {0}")]
     BorrowError(#[from] BorrowError),
     #[error("trying to use invalid Index")]
-    InvalidIndex,
+    InvalidIndexUsage,
+    #[error("trying to access removed element")]
+    RemovedElementAccess,
 }

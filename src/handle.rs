@@ -1,4 +1,4 @@
-use crate::error::ArenaResult;
+use crate::ArenaResult;
 use crate::Arena;
 use crate::Index;
 
