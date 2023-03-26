@@ -1,6 +1,7 @@
 use std::convert;
 
 #[derive(Debug, Clone, Copy)]
+#[repr(transparent)]
 pub struct Index {
     index: i64,
 }
