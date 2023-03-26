@@ -15,6 +15,10 @@ impl Index {
     pub fn invalid() -> Self {
         Self::new(-1)
     }
+
+    pub fn is_invalid(&self) -> bool {
+        self.index < 0
+    }
 }
 
 impl convert::Into<usize> for Index {
@@ -27,8 +31,20 @@ impl convert::Into<usize> for Index {
     }
 }
 
+impl convert::Into<i64> for Index {
+    fn into(self) -> i64 {
+        self.index
+    }
+}
+
 impl convert::From<usize> for Index {
     fn from(index: usize) -> Self {
         Self::new(index as i64)
+    }
+}
+
+impl convert::From<i64> for Index {
+    fn from(index: i64) -> Self {
+        Self::new(index)
     }
 }
