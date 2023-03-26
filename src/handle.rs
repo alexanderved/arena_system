@@ -13,11 +13,11 @@ pub trait Handle<'arena>
     fn as_raw(&self) -> &RawHandle<'arena, Self::Type>;
     fn as_mut_raw(&mut self) -> &mut RawHandle<'arena, Self::Type>;
 
-    fn get(&self) -> Option<ElementRef<'arena, Self::Type>> {
+    fn get(&self) -> Option<ElementRef<'arena, Option<Self::Type>>> {
         self.as_raw().get()
     }
 
-    fn get_mut(&mut self) -> Option<ElementRefMut<'arena, Self::Type>> {
+    fn get_mut(&mut self) -> Option<ElementRefMut<'arena, Option<Self::Type>>> {
         self.as_mut_raw().get_mut()
     }
 
@@ -37,11 +37,11 @@ pub struct RawHandle<'arena, T> {
 }
 
 impl<'arena, T> RawHandle<'arena, T> {
-    pub fn get(&self) -> Option<ElementRef<'arena, T>> {
+    pub fn get(&self) -> Option<ElementRef<'arena, Option<T>>> {
         self.arena.try_borrow(self.index)
     }
 
-    pub fn get_mut(&mut self) -> Option<ElementRefMut<'arena, T>> {
+    pub fn get_mut(&mut self) -> Option<ElementRefMut<'arena, Option<T>>> {
         self.arena.try_borrow_mut(self.index)
     }
 

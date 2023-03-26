@@ -25,7 +25,11 @@ impl<'arena> Handle<'arena> for I32Handle<'arena> {
 }
 
 fn main() {
-    let arena: Arena<i32> = Arena::from(vec![0, 1, 2, 3, 4, 5]);
+    let mut arena: Arena<i32> = Arena::new();
+    for value in vec![0, 1, 2, 3, 4, 5] {
+        arena.add(value)
+    }
+    
     let handle: I32Handle = arena.handle(1.into(), ());
 
     println!("{:#?}", handle);
