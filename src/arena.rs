@@ -57,6 +57,10 @@ impl<T> Arena<T> {
         }
     }
 
+    pub fn iter<'arena>(&'arena self) -> HandleIter<'arena, T> {
+        HandleIter { arena: self, last_index: Index::new(0) }
+    }
+
     pub(crate) fn try_borrow(&self, index: Index) -> ArenaResult<ElementRef<'_, Option<T>>> {
         if index.is_invalid() {
             return Err(ArenaError::InvalidIndexUsage);
