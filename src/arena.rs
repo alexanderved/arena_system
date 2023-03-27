@@ -82,3 +82,25 @@ impl<T> iter::FromIterator<T> for Arena<T> {
         arena
     }
 }
+
+pub struct HandleIter<'arena, T> {
+    arena: &'arena Arena<T>,
+    last_index: Index,
+}
+
+impl<'arena, T> iter::Iterator for HandleIter<'arena, T> {
+    type Item = RawHandle<'arena, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let last_index: usize = self.last_index.into();
+        if last_index >= self.arena.data.len() {
+            return None;
+        }
+
+        let handle = self.arena.handle::<Self::Item>(self.last_index, ());
+
+        self.last_index = Index::from(last_index as i64 + 1);
+
+        Some(handle)
+    }
+}
