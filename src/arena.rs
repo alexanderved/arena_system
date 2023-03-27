@@ -17,6 +17,14 @@ impl<T> Arena<T> {
         Self { data: VecCell::new(), free: vec![] }
     }
 
+    pub fn len(&self) -> usize {
+        self.data.len() - self.free.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn handle<'arena, H: Handle<'arena, Type = T>>(
         &'arena self,
         index: Index,
