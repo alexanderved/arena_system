@@ -1,6 +1,8 @@
 use crate::Index;
+use crate::{ArenaError, ArenaResult};
 use crate::{Handle, RawHandle};
-use crate::{ArenaResult, ArenaError};
+
+use std::iter;
 
 use vec_cell::{ElementRef, ElementRefMut, VecCell};
 
@@ -30,7 +32,7 @@ impl<T> Arena<T> {
             Some(free_index) => {
                 let mut free_place = self.try_borrow_mut(free_index).unwrap();
                 *free_place = Some(value);
-            },
+            }
             None => self.data.push(Some(value)),
         }
     }
@@ -61,5 +63,14 @@ impl<T> Arena<T> {
         }
 
         Ok(self.data.try_borrow_mut(index.into())?)
+    }
+}
+
+impl<T> iter::FromIterator<T> for Arena<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut arena = Arena::new();
+        iter.into_iter().for_each(|value| arena.add(value));
+
+        arena
     }
 }
