@@ -12,14 +12,13 @@ where
 
     fn from_raw(raw: RawHandle<'arena, Self::Type>, userdata: Self::Userdata) -> Self;
     fn as_raw(&self) -> &RawHandle<'arena, Self::Type>;
-    fn as_mut_raw(&mut self) -> &mut RawHandle<'arena, Self::Type>;
 
     fn get(&self) -> Option<ElementRef<'arena, Self::Type>> {
         self.as_raw().get()
     }
 
-    fn get_mut(&mut self) -> Option<ElementRefMut<'arena, Self::Type>> {
-        self.as_mut_raw().get_mut()
+    fn get_mut(&self) -> Option<ElementRefMut<'arena, Self::Type>> {
+        self.as_raw().get_mut()
     }
 
     fn arena(&self) -> &'arena Arena<Self::Type> {
@@ -55,15 +54,11 @@ impl<'arena, T> Handle<'arena> for RawHandle<'arena, T> {
         self
     }
 
-    fn as_mut_raw(&mut self) -> &mut RawHandle<'arena, Self::Type> {
-        self
-    }
-
     fn get(&self) -> Option<ElementRef<'arena, Self::Type>> {
         self.arena().try_borrow(self.index())
     }
 
-    fn get_mut(&mut self) -> Option<ElementRefMut<'arena, Self::Type>> {
+    fn get_mut(&self) -> Option<ElementRefMut<'arena, Self::Type>> {
         self.arena().try_borrow_mut(self.index())
     }
 
