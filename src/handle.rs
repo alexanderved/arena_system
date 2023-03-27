@@ -32,7 +32,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RawHandle<'arena, T> {
     arena: &'arena Arena<T>,
     index: Index,
