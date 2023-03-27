@@ -1,4 +1,3 @@
-use crate::ArenaResult;
 use crate::Arena;
 use crate::Index;
 
@@ -15,11 +14,11 @@ where
     fn as_raw(&self) -> &RawHandle<'arena, Self::Type>;
     fn as_mut_raw(&mut self) -> &mut RawHandle<'arena, Self::Type>;
 
-    fn get(&self) -> ArenaResult<ElementRef<'arena, Option<Self::Type>>> {
+    fn get(&self) -> Option<ElementRef<'arena, Self::Type>> {
         self.as_raw().get()
     }
 
-    fn get_mut(&mut self) -> ArenaResult<ElementRefMut<'arena, Option<Self::Type>>> {
+    fn get_mut(&mut self) -> Option<ElementRefMut<'arena, Self::Type>> {
         self.as_mut_raw().get_mut()
     }
 
@@ -60,11 +59,11 @@ impl<'arena, T> Handle<'arena> for RawHandle<'arena, T> {
         self
     }
 
-    fn get(&self) -> ArenaResult<ElementRef<'arena, Option<Self::Type>>> {
+    fn get(&self) -> Option<ElementRef<'arena, Self::Type>> {
         self.arena().try_borrow(self.index())
     }
 
-    fn get_mut(&mut self) -> ArenaResult<ElementRefMut<'arena, Option<Self::Type>>> {
+    fn get_mut(&mut self) -> Option<ElementRefMut<'arena, Self::Type>> {
         self.arena().try_borrow_mut(self.index())
     }
 

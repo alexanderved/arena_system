@@ -1,6 +1,6 @@
 [package]
 name = "arena_system"
-version = "0.0.7"
+version = "0.0.8"
 edition = "2021"
 description = "An arena allocator which uses handles for accessing elements"
 categories = ["memory-management"]
@@ -14,4 +14,4 @@ readme = "README.md"
 
 [dependencies]
 thiserror = "1.0"
-vec_cell = "0.1"
+vec_cell = "0.1.1"

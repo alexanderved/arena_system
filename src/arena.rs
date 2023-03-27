@@ -4,7 +4,7 @@ use crate::{Handle, RawHandle};
 
 use std::iter;
 
-use vec_cell::{ElementRef, ElementRefMut, VecCell};
+use vec_cell::{ElementRef, ElementRefMut, VecCell, Flatten};
 
 #[derive(Debug)]
 pub struct Arena<T> {
@@ -39,7 +39,7 @@ impl<T> Arena<T> {
         match self.free.pop() {
             Some(free_index) => {
                 let mut free_place = self.try_borrow_mut(free_index).unwrap();
-                *free_place = Some(value);
+                *free_place = value;
             }
             None => self.data.push(Some(value)),
         }
@@ -50,31 +50,31 @@ impl<T> Arena<T> {
             return Err(ArenaError::InvalidIndexUsage);
         }
 
-        let mut element = self.try_borrow_mut(index).unwrap();
+        let mut element = self.data.try_take(index.into()).unwrap();
         match element.take() {
             Some(element) => Ok(element),
             None => Err(ArenaError::RemovedElementAccess),
         }
     }
 
-    pub fn iter<'arena>(&'arena self) -> HandleIter<'arena, T> {
+    pub fn handle_iter<'arena>(&'arena self) -> HandleIter<'arena, T> {
         HandleIter { arena: self, last_index: Index::new(0) }
     }
 
-    pub(crate) fn try_borrow(&self, index: Index) -> ArenaResult<ElementRef<'_, Option<T>>> {
+    pub(crate) fn try_borrow(&self, index: Index) -> Option<ElementRef<'_, T>> {
         if index.is_invalid() {
-            return Err(ArenaError::InvalidIndexUsage);
+            return None;
         }
 
-        Ok(self.data.try_borrow(index.into())?)
+        self.data.try_borrow(index.into()).ok().flatten()
     }
 
-    pub(crate) fn try_borrow_mut(&self, index: Index) -> ArenaResult<ElementRefMut<'_, Option<T>>> {
+    pub(crate) fn try_borrow_mut(&self, index: Index) -> Option<ElementRefMut<'_, T>> {
         if index.is_invalid() {
-            return Err(ArenaError::InvalidIndexUsage);
+            return None;
         }
 
-        Ok(self.data.try_borrow_mut(index.into())?)
+        self.data.try_borrow_mut(index.into()).ok().flatten()
     }
 }
 
