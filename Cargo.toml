@@ -1,6 +1,6 @@
 [package]
 name = "arena_system"
-version = "0.0.11"
+version = "0.0.12"
 edition = "2021"
 description = "An arena allocator which uses handles for accessing elements"
 categories = ["memory-management"]

@@ -4,7 +4,7 @@ use crate::{Handle, RawHandle};
 
 use std::iter;
 
-use vec_cell::{ElementRef, ElementRefMut, VecCell, Flatten};
+use vec_cell::{ElementRef, ElementRefMut, Flatten, VecCell};
 
 #[derive(Debug)]
 pub struct Arena<T> {
@@ -57,8 +57,16 @@ impl<T> Arena<T> {
         }
     }
 
-    pub fn handle_iter<'arena>(&'arena self) -> HandleIter<'arena, T> {
-        HandleIter { arena: self, last_index: Index::new(0) }
+    pub fn handle_iter<'arena, H: Handle<'arena, Type = T>>(
+        &'arena self,
+        userdata: H::Userdata,
+    ) -> HandleIter<'arena, T, H> {
+        HandleIter {
+            arena: self,
+            userdata,
+            last_index: Index::new(0),
+            _p: std::marker::PhantomData
+        }
     }
 
     pub fn try_borrow(&self, index: Index) -> Option<ElementRef<'_, T>> {
@@ -87,13 +95,17 @@ impl<T> iter::FromIterator<T> for Arena<T> {
     }
 }
 
-pub struct HandleIter<'arena, T> {
+pub struct HandleIter<'arena, T, H: Handle<'arena, Type = T>> {
     arena: &'arena Arena<T>,
+    userdata: H::Userdata,
+
     last_index: Index,
+
+    _p: std::marker::PhantomData<H>,
 }
 
-impl<'arena, T> iter::Iterator for HandleIter<'arena, T> {
-    type Item = RawHandle<'arena, T>;
+impl<'arena, T, H: Handle<'arena, Type = T>> iter::Iterator for HandleIter<'arena, T, H> {
+    type Item = H;
 
     fn next(&mut self) -> Option<Self::Item> {
         let last_index: usize = self.last_index.into();
@@ -101,7 +113,7 @@ impl<'arena, T> iter::Iterator for HandleIter<'arena, T> {
             return None;
         }
 
-        let handle = self.arena.handle::<Self::Item>(self.last_index, ());
+        let handle = self.arena.handle::<Self::Item>(self.last_index, self.userdata.clone());
 
         self.last_index = Index::from(last_index as i64 + 1);
 

@@ -8,7 +8,7 @@ where
     Self: 'arena,
 {
     type Type;
-    type Userdata;
+    type Userdata: Clone;
 
     fn from_raw(raw: RawHandle<'arena, Self::Type>, userdata: Self::Userdata) -> Self;
     fn as_raw(&self) -> &RawHandle<'arena, Self::Type>;

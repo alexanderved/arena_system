@@ -8,9 +8,7 @@ pub struct Index {
 
 impl Index {
     pub fn new(index: i64) -> Self {
-        Self {
-            index
-        }
+        Self { index }
     }
 
     pub fn invalid() -> Self {
