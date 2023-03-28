@@ -61,7 +61,7 @@ impl<T> Arena<T> {
         HandleIter { arena: self, last_index: Index::new(0) }
     }
 
-    pub(crate) fn try_borrow(&self, index: Index) -> Option<ElementRef<'_, T>> {
+    pub fn try_borrow(&self, index: Index) -> Option<ElementRef<'_, T>> {
         if index.is_invalid() {
             return None;
         }
@@ -69,7 +69,7 @@ impl<T> Arena<T> {
         self.data.try_borrow(index.into()).ok().flatten()
     }
 
-    pub(crate) fn try_borrow_mut(&self, index: Index) -> Option<ElementRefMut<'_, T>> {
+    pub fn try_borrow_mut(&self, index: Index) -> Option<ElementRefMut<'_, T>> {
         if index.is_invalid() {
             return None;
         }
