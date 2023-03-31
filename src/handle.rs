@@ -14,22 +14,22 @@ where
     type Userdata: Clone;
 
     fn from_raw(raw: RawHandle<'arena, Self::Type>, userdata: Self::Userdata) -> Self;
-    fn as_raw(&self) -> &RawHandle<'arena, Self::Type>;
+    fn to_raw(&self) -> RawHandle<'arena, Self::Type>;
 
     fn get(&self) -> Option<ElementRef<'arena, Self::Type>> {
-        self.as_raw().get()
+        self.to_raw().get()
     }
 
     fn get_mut(&self) -> Option<ElementRefMut<'arena, Self::Type>> {
-        self.as_raw().get_mut()
+        self.to_raw().get_mut()
     }
 
     fn arena(&self) -> &'arena Arena<Self::Type> {
-        self.as_raw().arena()
+        self.to_raw().arena()
     }
 
     fn index(&self) -> Index {
-        self.as_raw().index()
+        self.to_raw().index()
     }
 }
 
@@ -52,8 +52,8 @@ impl<'arena, T> Handle<'arena> for RawHandle<'arena, T> {
         raw
     }
 
-    fn as_raw(&self) -> &RawHandle<'arena, Self::Type> {
-        self
+    fn to_raw(&self) -> RawHandle<'arena, Self::Type> {
+        *self
     }
 
     fn get(&self) -> Option<ElementRef<'arena, Self::Type>> {
