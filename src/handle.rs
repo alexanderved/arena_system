@@ -1,6 +1,9 @@
 use crate::Arena;
 use crate::Index;
 
+use std::fmt;
+use std::cmp;
+
 use vec_cell::{ElementRef, ElementRefMut};
 
 pub trait Handle<'arena>
@@ -30,7 +33,6 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy)]
 pub struct RawHandle<'arena, T> {
     arena: &'arena Arena<T>,
     index: Index,
@@ -68,5 +70,39 @@ impl<'arena, T> Handle<'arena> for RawHandle<'arena, T> {
 
     fn index(&self) -> Index {
         self.index
+    }
+}
+
+impl<T> fmt::Debug for RawHandle<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!("Handle({})", <Index as Into<i64>>::into(self.index)))
+    }
+}
+
+impl<T> Clone for RawHandle<'_, T> {
+    fn clone(&self) -> Self {
+        Self::new(self.arena(), self.index())
+    }
+}
+
+impl<T> Copy for RawHandle<'_, T> {}
+
+impl<T> cmp::PartialEq for RawHandle<'_, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.index() == other.index()
+    }
+}
+
+impl<T> cmp::Eq for RawHandle<'_, T> {}
+
+impl<T> cmp::PartialOrd for RawHandle<'_, T> {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        self.index.partial_cmp(&other.index)
+    }
+}
+
+impl<T> cmp::Ord for RawHandle<'_, T> {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.index.cmp(&other.index)
     }
 }

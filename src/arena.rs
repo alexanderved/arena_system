@@ -65,7 +65,7 @@ impl<T> Arena<T> {
             arena: self,
             userdata,
             last_index: Index::new(0),
-            _p: std::marker::PhantomData
+            _p: std::marker::PhantomData,
         }
     }
 
