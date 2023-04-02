@@ -2,7 +2,7 @@ use crate::Index;
 use crate::{ArenaError, ArenaResult};
 use crate::{Handle, RawHandle};
 
-use std::iter;
+use std::{iter, convert};
 
 use vec_cell::{ElementRef, ElementRefMut, Flatten, VecCell};
 
@@ -83,6 +83,12 @@ impl<T> Arena<T> {
         }
 
         self.data.try_borrow_mut(index.into()).flatten().map_err(ArenaError::from)
+    }
+}
+
+impl<T> convert::From<Vec<T>> for Arena<T> {
+    fn from(data: Vec<T>) -> Self {
+        data.into_iter().collect()
     }
 }
 
