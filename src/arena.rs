@@ -38,7 +38,7 @@ impl<T> Arena<T> {
     pub fn add(&mut self, value: T) {
         match self.free.pop() {
             Some(free_index) => {
-                let mut free_place = self.try_borrow_mut(free_index).unwrap();
+                let mut free_place = self.lookup_mut(free_index).unwrap();
                 *free_place = value;
             }
             None => self.data.push(Some(value)),
@@ -69,20 +69,20 @@ impl<T> Arena<T> {
         }
     }
 
-    pub fn try_borrow(&self, index: Index) -> Option<ElementRef<'_, T>> {
+    pub fn lookup(&self, index: Index) -> ArenaResult<ElementRef<'_, T>> {
         if index.is_invalid() {
-            return None;
+            return Err(ArenaError::InvalidIndexUsage);
         }
 
-        self.data.try_borrow(index.into()).ok().flatten()
+        self.data.try_borrow(index.into()).flatten().map_err(ArenaError::from)
     }
 
-    pub fn try_borrow_mut(&self, index: Index) -> Option<ElementRefMut<'_, T>> {
+    pub fn lookup_mut(&self, index: Index) -> ArenaResult<ElementRefMut<'_, T>> {
         if index.is_invalid() {
-            return None;
+            return Err(ArenaError::InvalidIndexUsage);
         }
 
-        self.data.try_borrow_mut(index.into()).ok().flatten()
+        self.data.try_borrow_mut(index.into()).flatten().map_err(ArenaError::from)
     }
 }
 

@@ -1,5 +1,6 @@
 use crate::Arena;
 use crate::Index;
+use crate::ArenaResult;
 
 use std::fmt;
 use std::cmp;
@@ -16,11 +17,11 @@ where
     fn from_raw(raw: RawHandle<'arena, Self::Type>, userdata: Self::Userdata) -> Self;
     fn to_raw(&self) -> RawHandle<'arena, Self::Type>;
 
-    fn get(&self) -> Option<ElementRef<'arena, Self::Type>> {
+    fn get(&self) -> ArenaResult<ElementRef<'arena, Self::Type>> {
         self.to_raw().get()
     }
 
-    fn get_mut(&self) -> Option<ElementRefMut<'arena, Self::Type>> {
+    fn get_mut(&self) -> ArenaResult<ElementRefMut<'arena, Self::Type>> {
         self.to_raw().get_mut()
     }
 
@@ -56,12 +57,12 @@ impl<'arena, T> Handle<'arena> for RawHandle<'arena, T> {
         *self
     }
 
-    fn get(&self) -> Option<ElementRef<'arena, Self::Type>> {
-        self.arena().try_borrow(self.index())
+    fn get(&self) -> ArenaResult<ElementRef<'arena, Self::Type>> {
+        self.arena().lookup(self.index())
     }
 
-    fn get_mut(&self) -> Option<ElementRefMut<'arena, Self::Type>> {
-        self.arena().try_borrow_mut(self.index())
+    fn get_mut(&self) -> ArenaResult<ElementRefMut<'arena, Self::Type>> {
+        self.arena().lookup_mut(self.index())
     }
 
     fn arena(&self) -> &'arena Arena<Self::Type> {
