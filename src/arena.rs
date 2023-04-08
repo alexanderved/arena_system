@@ -125,7 +125,7 @@ impl<'arena, T, H: Handle<'arena, Type = T>> iter::Iterator for HandleIter<'aren
             return None;
         }
 
-        let mut handle = self.arena.handle::<Self::Item>(self.last_index, self.userdata.clone());
+        let handle = self.arena.handle::<Self::Item>(self.last_index, self.userdata.clone());
         self.last_index = Index::from(last_index as i64 + 1);
 
         Some(handle)
