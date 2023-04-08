@@ -35,13 +35,19 @@ impl<T> Arena<T> {
         H::from_raw(raw_handle, userdata)
     }
 
-    pub fn add(&mut self, value: T) {
+    pub fn add(&mut self, value: T) -> Index {
         match self.free.pop() {
             Some(free_index) => {
                 let mut free_place = self.lookup_mut(free_index).unwrap();
                 *free_place = value;
+
+                free_index
             }
-            None => self.data.push(Some(value)),
+            None => {
+                self.data.push(Some(value));
+
+                Index::from(self.data.len() - 1)
+            },
         }
     }
 
@@ -95,7 +101,7 @@ impl<T> convert::From<Vec<T>> for Arena<T> {
 impl<T> iter::FromIterator<T> for Arena<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         let mut arena = Arena::new();
-        iter.into_iter().for_each(|value| arena.add(value));
+        iter.into_iter().for_each(|value| { arena.add(value); });
 
         arena
     }
