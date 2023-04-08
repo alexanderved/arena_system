@@ -25,6 +25,10 @@ where
         self.to_raw().get_mut()
     }
 
+    fn exists(&self) -> bool {
+        self.to_raw().get().is_ok()
+    }
+
     fn arena(&self) -> &'arena Arena<Self::Type> {
         self.to_raw().arena()
     }
