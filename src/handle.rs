@@ -7,11 +7,15 @@ use std::cmp;
 
 use vec_cell::{ElementRef, ElementRefMut};
 
+pub trait Handleable<'arena> {
+    type Handle: Handle<'arena>;
+}
+
 pub trait Handle<'arena>
 where
     Self: 'arena,
 {
-    type Type;
+    type Type: Handleable<'arena>;
     type Userdata: Clone;
 
     fn from_raw(raw: RawHandle<'arena, Self::Type>, userdata: Self::Userdata) -> Self;
@@ -49,7 +53,7 @@ impl<'arena, T> RawHandle<'arena, T> {
     }
 }
 
-impl<'arena, T> Handle<'arena> for RawHandle<'arena, T> {
+impl<'arena, T: Handleable<'arena>> Handle<'arena> for RawHandle<'arena, T> {
     type Type = T;
     type Userdata = ();
 
@@ -84,29 +88,29 @@ impl<T> fmt::Debug for RawHandle<'_, T> {
     }
 }
 
-impl<T> Clone for RawHandle<'_, T> {
+impl<'arena, T: Handleable<'arena>> Clone for RawHandle<'arena, T> {
     fn clone(&self) -> Self {
         Self::new(self.arena(), self.index())
     }
 }
 
-impl<T> Copy for RawHandle<'_, T> {}
+impl<'arena, T: Handleable<'arena>> Copy for RawHandle<'arena, T> {}
 
-impl<T> cmp::PartialEq for RawHandle<'_, T> {
+impl<'arena, T: Handleable<'arena>> cmp::PartialEq for RawHandle<'arena, T> {
     fn eq(&self, other: &Self) -> bool {
         self.index() == other.index()
     }
 }
 
-impl<T> cmp::Eq for RawHandle<'_, T> {}
+impl<'arena, T: Handleable<'arena>> cmp::Eq for RawHandle<'arena, T> {}
 
-impl<T> cmp::PartialOrd for RawHandle<'_, T> {
+impl<'arena, T: Handleable<'arena>> cmp::PartialOrd for RawHandle<'arena, T> {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         self.index.partial_cmp(&other.index)
     }
 }
 
-impl<T> cmp::Ord for RawHandle<'_, T> {
+impl<'arena, T: Handleable<'arena>> cmp::Ord for RawHandle<'arena, T> {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         self.index.cmp(&other.index)
     }
