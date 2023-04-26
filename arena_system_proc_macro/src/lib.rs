@@ -3,14 +3,11 @@ extern crate proc_macro;
 use std::collections::HashMap;
 
 use proc_macro2::{Span, TokenStream};
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, quote_spanned};
 use syn::{
-    parse::{Error, Result},
-    parse_macro_input, parse_quote,
-    punctuated::Punctuated,
-    token::Comma,
-    ConstParam, Data, DeriveInput, Field, Fields, GenericParam, Generics, Ident, Lifetime,
-    LifetimeParam, Token, Type, TypeParam, Visibility, WhereClause, WherePredicate,
+    parenthesized, parse::Result, parse_macro_input, parse_quote, punctuated::Punctuated, Data,
+    DeriveInput, Field, Fields, GenericParam, Generics, Ident, Lifetime, Token, Type,
+    VisRestricted, Visibility, WhereClause, spanned::Spanned,
 };
 
 #[derive(Debug, Clone)]
@@ -57,7 +54,7 @@ impl HandleableInfo {
     }
 
     fn quote_impl(&self) -> TokenStream {
-        let HandleableInfo { vis, ident, generics, lifetime, .. } = self;
+        let HandleableInfo { ident, generics, lifetime, .. } = self;
 
         let handleable_type = self.to_type();
 
@@ -67,7 +64,7 @@ impl HandleableInfo {
         let generics_types = impl_generics.clone().map(|g| match g {
             GenericParam::Type(t) => &t.ident,
             GenericParam::Const(c) => &c.ident,
-            _ => unimplemented!(),
+            GenericParam::Lifetime(_) => unimplemented!(),
         });
 
         let handle_ident = format_ident!("{}Handle", ident);
@@ -87,6 +84,7 @@ struct HandleInfo<'a> {
 
     vis: Visibility,
     ident: Ident,
+    #[allow(unused)]
     userdata: Option<HashMap<Ident, Type>>,
 }
 
@@ -108,8 +106,8 @@ impl<'a> HandleInfo<'a> {
         parse_quote!(#ident < #lifetime, #( #ty_generics ),* >)
     }
 
-    fn quote(self) -> TokenStream {
-        let HandleInfo { ref handleable, .. } = self;
+    fn quote(self) -> Result<TokenStream> {
+        let HandleInfo { handleable, .. } = self;
 
         let handle_decl = self.handle_decl();
 
@@ -118,9 +116,9 @@ impl<'a> HandleInfo<'a> {
         let handleable_type = handleable.to_type();
         let handle_type = self.to_type();
 
-        let getters = self.getters();
+        let getters = self.getters()?;
 
-        quote! {
+        Ok(quote! {
             #handle_decl
 
             impl<#lifetime, #( #impl_generics ),*> arena_system::Handle<#lifetime>
@@ -144,7 +142,7 @@ impl<'a> HandleInfo<'a> {
             }
 
             #getters
-        }
+        })
     }
 
     fn handle_decl(&self) -> TokenStream {
@@ -163,59 +161,112 @@ impl<'a> HandleInfo<'a> {
         }
     }
 
-    fn getters(&self) -> TokenStream {
-        let getters = self.handleable
+    fn getters(&self) -> Result<TokenStream> {
+        let getters = self
+            .handleable
             .fields
             .iter()
             .map(|f| {
-                let ident = &f.ident;
                 let ty = &f.ty;
+                let ty_span = ty.span();
+                let ident = &f.ident;
+
+                let mut return_ty = quote!(Option<arena_system::ElementRef<'arena, #ty>>);
+                let mut fn_body = quote_spanned! { ty_span=>
+                    self.get()
+                        .ok()
+                        .map(|this_ref| arena_system::ElementRef::map(
+                            this_ref,
+                            |this| {
+                                &this.#ident
+                            }
+                        ))
+                };
+
                 let mut fn_ident = ident.clone();
+                let mut fn_vis = f.vis.clone();
 
-                f.attrs
-                    .iter()
-                    .filter(|a| a.path().is_ident("getter"))
-                    .try_for_each(|a| {
-                        a.parse_nested_meta(|meta| {
-                            if meta.path.is_ident("name") {
-                                let value = meta.value()?;
-                                let s: syn::LitStr = value.parse()?;
+                f.attrs.iter().filter(|a| a.path().is_ident("getter")).try_for_each(|a| {
+                    a.parse_nested_meta(|meta| {
+                        if meta.path.is_ident("name") {
+                            let content;
+                            parenthesized!(content in meta.input);
+                            fn_ident = content.parse().ok();
 
-                                fn_ident = Some(Ident::new(
-                                    &s.value(),
-                                    Span::call_site()
-                                ));
+                            return Ok(());
+                        }
 
-                                return Ok(());
+                        if meta.path.is_ident("vis") {
+                            let vis;
+                            parenthesized!(vis in meta.input);
+
+                            if vis.peek(Token![priv]) {
+                                vis.parse::<Token![priv]>()?;
+                                fn_vis = Visibility::Inherited;
+                            } else if vis.peek(Token![pub]) {
+                                if vis.peek2(syn::token::Paren) {
+                                    let path;
+
+                                    fn_vis = Visibility::Restricted(VisRestricted {
+                                        pub_token: vis.parse::<Token![pub]>()?,
+                                        paren_token: parenthesized!(path in vis),
+                                        in_token: path.parse::<Token![in]>().ok(),
+                                        path: path.parse::<Box<syn::Path>>()?,
+                                    });
+                                } else {
+                                    let pub_token = vis.parse::<Token![pub]>()?;
+                                    fn_vis = Visibility::Public(pub_token);
+                                }
                             }
 
-                            Err(meta.error("unrecognised getter attribute"))
-                        })
-                    })
-                    .unwrap();
+                            return Ok(());
+                        }
 
-                quote! {
-                    pub fn #fn_ident(&self) -> Option<ElementRef<'arena, #ty>> {
-                        self
-                            .get()
-                            .ok()
-                            .map(|this_ref| ElementRef::map(this_ref, |this| {
-                                &this.#ident
-                            }))
+                        if meta.path.is_ident("clone") {
+                            return_ty = quote!(Option<#ty>);
+                            fn_body = quote_spanned! { ty_span=>
+                                self.get()
+                                    .ok()
+                                    .map(|this_ref| this_ref.#ident.clone())
+                            };
+                            
+                            return Ok(());
+                        }
+
+                        if meta.path.is_ident("copy") {
+                            return_ty = quote!(Option<#ty>);
+                            fn_body = quote_spanned! { ty_span=>
+                                self.get()
+                                    .ok()
+                                    .map(|this_ref| this_ref.#ident)
+                            };
+                            
+                            return Ok(());
+                        }
+
+                        Err(meta.error("unrecognised getter attribute"))
+                    })
+                })?;
+
+                Ok(quote! {
+                    #fn_vis fn #fn_ident(&self) -> #return_ty {
+                        #fn_body
                     }
-                }
+                })
             })
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>>>();
 
         let lifetime = &self.handleable.lifetime;
         let (impl_generics, _, where_clause) = iter_generics(&self.handleable.generics);
         let handle_type = self.to_type();
 
-        quote! {
-            impl<#lifetime, #( #impl_generics ),*> #handle_type #where_clause {
-                #( #getters )*
+        getters.map(|getters| {
+            quote! {
+                impl<#lifetime, #( #impl_generics ),*> #handle_type #where_clause {
+                    #( #getters )*
+                }
             }
-        }
+        })
     }
 }
 
@@ -244,7 +295,10 @@ pub fn derive_handleable(input: proc_macro::TokenStream) -> proc_macro::TokenStr
     let handle_info = HandleInfo::parse(&handleable_info);
 
     let handleable_impl = handleable_info.quote_impl();
-    let handle = handle_info.quote();
+    let handle = match handle_info.quote() {
+        Ok(h) => h,
+        Err(err) => return err.to_compile_error().into(),
+    };
 
     quote! {
         #handleable_impl
