@@ -125,7 +125,7 @@ impl<'a> HandleInfo<'a> {
                 for #handle_type #where_clause
             {
                 type Type = #handleable_type;
-                type Userdata = ();
+                type Userdata = arena_system::EmptyUserdata;
 
                 fn from_raw(
                     raw: arena_system::RawHandle<#lifetime, Self::Type>,
@@ -173,6 +173,7 @@ impl<'a> HandleInfo<'a> {
 
                 let mut return_ty = quote!(Option<arena_system::ElementRef<'arena, #ty>>);
                 let mut fn_body = quote_spanned! { ty_span=>
+                    use arena_system::Handle;
                     self.get()
                         .ok()
                         .map(|this_ref| arena_system::ElementRef::map(
@@ -225,6 +226,7 @@ impl<'a> HandleInfo<'a> {
                         if meta.path.is_ident("clone") {
                             return_ty = quote!(Option<#ty>);
                             fn_body = quote_spanned! { ty_span=>
+                                use arena_system::Handle;
                                 self.get()
                                     .ok()
                                     .map(|this_ref| this_ref.#ident.clone())
@@ -236,6 +238,7 @@ impl<'a> HandleInfo<'a> {
                         if meta.path.is_ident("copy") {
                             return_ty = quote!(Option<#ty>);
                             fn_body = quote_spanned! { ty_span=>
+                                use arena_system::Handle;
                                 self.get()
                                     .ok()
                                     .map(|this_ref| this_ref.#ident)

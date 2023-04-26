@@ -2,7 +2,6 @@ mod a {
     use arena_system::Arena;
 
     pub mod b {
-        use arena_system::Handle;
         use arena_system_proc_macro::Handleable;
 
         #[derive(Handleable)]
@@ -24,7 +23,7 @@ mod a {
         println!(
             "{}",
             test_arena
-                .handle(0i64.into(), ())
+                .handle(0i64.into(), None)
                 .test()
                 .unwrap()
         );

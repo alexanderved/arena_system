@@ -7,6 +7,11 @@ use std::fmt;
 
 use vec_cell::{ElementRef, ElementRefMut};
 
+#[derive(Debug, Clone, Copy)]
+pub enum Void {}
+
+pub type EmptyUserdata = Option<Void>;
+
 pub trait Handleable<'arena> {
     type Handle: Handle<'arena, Type = Self>;
 }
@@ -55,7 +60,7 @@ impl<'arena, T> RawHandle<'arena, T> {
 
 impl<'arena, T: Handleable<'arena>> Handle<'arena> for RawHandle<'arena, T> {
     type Type = T;
-    type Userdata = ();
+    type Userdata = EmptyUserdata;
 
     fn from_raw(raw: RawHandle<'arena, Self::Type>, _userdata: Self::Userdata) -> Self {
         raw
