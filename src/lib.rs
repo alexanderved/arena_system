@@ -8,4 +8,4 @@ pub use error::*;
 pub use handle::*;
 pub use index::*;
 
-pub extern crate vec_cell;
+pub use vec_cell::{ElementRef, ElementRefMut, BorrowError};
