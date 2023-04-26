@@ -1,14 +1,14 @@
 use crate::Arena;
-use crate::Index;
 use crate::ArenaResult;
+use crate::Index;
 
-use std::fmt;
 use std::cmp;
+use std::fmt;
 
 use vec_cell::{ElementRef, ElementRefMut};
 
 pub trait Handleable<'arena> {
-    type Handle: Handle<'arena>;
+    type Handle: Handle<'arena, Type = Self>;
 }
 
 pub trait Handle<'arena>

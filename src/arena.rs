@@ -1,8 +1,8 @@
-use crate::Index;
 use crate::{ArenaError, ArenaResult};
 use crate::{Handle, RawHandle};
+use crate::{Handleable, Index};
 
-use std::{iter, convert};
+use std::{convert, iter};
 
 use vec_cell::{ElementRef, ElementRefMut, Flatten, VecCell};
 
@@ -12,7 +12,7 @@ pub struct Arena<T> {
     free: Vec<Index>,
 }
 
-impl<T> Arena<T> {
+impl<'arena, T: Handleable<'arena>> Arena<T> {
     pub fn new() -> Self {
         Self { data: VecCell::new(), free: vec![] }
     }
@@ -25,14 +25,14 @@ impl<T> Arena<T> {
         self.len() == 0
     }
 
-    pub fn handle<'arena, H: Handle<'arena, Type = T>>(
+    pub fn handle(
         &'arena self,
         index: Index,
-        userdata: H::Userdata,
-    ) -> H {
+        userdata: <T::Handle as Handle<'arena>>::Userdata,
+    ) -> T::Handle {
         let raw_handle = RawHandle::new(self, index);
 
-        H::from_raw(raw_handle, userdata)
+        T::Handle::from_raw(raw_handle, userdata)
     }
 
     pub fn add(&mut self, value: T) -> Index {
@@ -47,7 +47,7 @@ impl<T> Arena<T> {
                 self.data.push(Some(value));
 
                 Index::from(self.data.len() - 1)
-            },
+            }
         }
     }
 
@@ -63,15 +63,14 @@ impl<T> Arena<T> {
         }
     }
 
-    pub fn handle_iter<'arena, H: Handle<'arena, Type = T>>(
+    pub fn handle_iter(
         &'arena self,
-        userdata: H::Userdata,
-    ) -> HandleIter<'arena, T, H> {
+        userdata: <T::Handle as Handle<'arena>>::Userdata,
+    ) -> HandleIter<'arena, T> {
         HandleIter {
             arena: self,
             userdata,
             last_index: Index::new(0),
-            _p: std::marker::PhantomData,
         }
     }
 
@@ -92,32 +91,34 @@ impl<T> Arena<T> {
     }
 }
 
-impl<T> convert::From<Vec<T>> for Arena<T> {
+impl<'arena, T: Handleable<'arena>> convert::From<Vec<T>> for Arena<T> {
     fn from(data: Vec<T>) -> Self {
         data.into_iter().collect()
     }
 }
 
-impl<T> iter::FromIterator<T> for Arena<T> {
+impl<'arena, T: Handleable<'arena>> iter::FromIterator<T> for Arena<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         let mut arena = Arena::new();
-        iter.into_iter().for_each(|value| { arena.add(value); });
+        iter.into_iter().for_each(|value| {
+            arena.add(value);
+        });
 
         arena
     }
 }
 
-pub struct HandleIter<'arena, T, H: Handle<'arena, Type = T>> {
+pub struct HandleIter<'arena, T: Handleable<'arena>> {
     arena: &'arena Arena<T>,
-    userdata: H::Userdata,
+    userdata: <T::Handle as Handle<'arena>>::Userdata,
 
     last_index: Index,
-
-    _p: std::marker::PhantomData<H>,
 }
 
-impl<'arena, T, H: Handle<'arena, Type = T>> iter::Iterator for HandleIter<'arena, T, H> {
-    type Item = H;
+impl<'arena, T: Handleable<'arena>> iter::Iterator
+    for HandleIter<'arena, T>
+{
+    type Item = T::Handle;
 
     fn next(&mut self) -> Option<Self::Item> {
         let last_index: usize = self.last_index.into();
@@ -125,7 +126,7 @@ impl<'arena, T, H: Handle<'arena, Type = T>> iter::Iterator for HandleIter<'aren
             return None;
         }
 
-        let handle = self.arena.handle::<Self::Item>(self.last_index, self.userdata.clone());
+        let handle = self.arena.handle(self.last_index, self.userdata.clone());
         self.last_index = Index::from(last_index as i64 + 1);
 
         Some(handle)

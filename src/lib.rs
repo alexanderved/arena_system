@@ -8,4 +8,4 @@ pub use error::*;
 pub use handle::*;
 pub use index::*;
 
-pub use vec_cell::{ElementRef, ElementRefMut, BorrowError};
+pub use vec_cell::{BorrowError, ElementRef, ElementRefMut};

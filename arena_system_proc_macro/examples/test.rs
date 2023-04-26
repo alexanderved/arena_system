@@ -24,7 +24,7 @@ mod a {
         println!(
             "{}",
             test_arena
-                .handle::<TestHandle<'_, 42, i32>>(0i64.into(), ())
+                .handle(0i64.into(), ())
                 .test()
                 .unwrap()
         );
