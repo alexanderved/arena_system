@@ -1,3 +1,5 @@
+use crate::util::iter_generics;
+
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{
@@ -56,15 +58,7 @@ impl HandleableInfo {
         let HandleableInfo { generics, handle_ident, lifetime, .. } = self;
 
         let handleable_type = self.to_type();
-
-        let where_clause = &generics.where_clause;
-        let impl_generics = generics.params.iter();
-
-        let generics_types = impl_generics.clone().map(|g| match g {
-            GenericParam::Type(t) => &t.ident,
-            GenericParam::Const(c) => &c.ident,
-            GenericParam::Lifetime(_) => unimplemented!(),
-        });
+        let (impl_generics, generics_types, where_clause) = iter_generics(generics);
 
         quote! {
             impl<#lifetime, #( #impl_generics ),*> arena_system::Handleable<#lifetime>
