@@ -47,6 +47,12 @@ where
     }
 }
 
+impl<'arena, H: Handle<'arena>> From<H> for RawHandle<'arena, H::Type> {
+    fn from(handle: H) -> Self {
+        handle.to_raw()
+    }
+}
+
 pub struct RawHandle<'arena, T> {
     arena: &'arena Arena<T>,
     index: Index,
@@ -58,27 +64,16 @@ impl<'arena, T> RawHandle<'arena, T> {
     }
 }
 
-impl<'arena, T: Handleable<'arena>> Handle<'arena> for RawHandle<'arena, T> {
-    type Type = T;
-    type Userdata = EmptyUserdata;
-
-    fn from_raw(raw: RawHandle<'arena, Self::Type>, _userdata: Self::Userdata) -> Self {
-        raw
-    }
-
-    fn to_raw(&self) -> RawHandle<'arena, Self::Type> {
-        *self
-    }
-
-    fn get(&self) -> ArenaResult<ElementRef<'arena, Self::Type>> {
+impl<'arena, T: Handleable<'arena>> RawHandle<'arena, T> {
+    fn get(&self) -> ArenaResult<ElementRef<'arena, T>> {
         self.arena().lookup(self.index())
     }
 
-    fn get_mut(&self) -> ArenaResult<ElementRefMut<'arena, Self::Type>> {
+    fn get_mut(&self) -> ArenaResult<ElementRefMut<'arena, T>> {
         self.arena().lookup_mut(self.index())
     }
 
-    fn arena(&self) -> &'arena Arena<Self::Type> {
+    fn arena(&self) -> &'arena Arena<T> {
         self.arena
     }
 

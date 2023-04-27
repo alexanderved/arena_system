@@ -115,9 +115,7 @@ pub struct HandleIter<'arena, T: Handleable<'arena>> {
     last_index: Index,
 }
 
-impl<'arena, T: Handleable<'arena>> iter::Iterator
-    for HandleIter<'arena, T>
-{
+impl<'arena, T: Handleable<'arena>> iter::Iterator for HandleIter<'arena, T> {
     type Item = T::Handle;
 
     fn next(&mut self) -> Option<Self::Item> {
