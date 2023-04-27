@@ -1,8 +1,10 @@
+use crate::util::{parse_name_attr, parse_vis_attr};
+
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::{
-    parenthesized, parse::Result, parse_quote, spanned::Spanned, Field, Ident, Lifetime, Token,
-    Type, VisRestricted, Visibility,
+    parenthesized, parse::Result, parse_quote, spanned::Spanned, Field, Ident, Lifetime, Type,
+    Visibility,
 };
 
 pub struct Getter {
@@ -41,37 +43,13 @@ impl Getter {
             .try_for_each(|a| {
                 a.parse_nested_meta(|meta| {
                     if meta.path.is_ident("name") {
-                        let name;
-                        parenthesized!(name in meta.input);
-                        fn_ident = name.parse()?;
+                        fn_ident = parse_name_attr(meta)?;
 
                         return Ok(());
                     }
 
                     if meta.path.is_ident("vis") {
-                        let vis;
-                        parenthesized!(vis in meta.input);
-
-                        if vis.peek(Token![priv]) {
-                            vis.parse::<Token![priv]>()?;
-                            fn_vis = Visibility::Inherited;
-                        } else if vis.peek(Token![pub]) {
-                            if vis.peek2(syn::token::Paren) {
-                                let path;
-
-                                fn_vis = Visibility::Restricted(VisRestricted {
-                                    pub_token: vis.parse::<Token![pub]>()?,
-                                    paren_token: parenthesized!(path in vis),
-                                    in_token: path.parse::<Token![in]>().ok(),
-                                    path: path.parse::<Box<syn::Path>>()?,
-                                });
-                            } else {
-                                let pub_token = vis.parse::<Token![pub]>()?;
-                                fn_vis = Visibility::Public(pub_token);
-                            }
-                        } else {
-                            return Err(meta.error("unrecognised visiility level"));
-                        }
+                        fn_vis = parse_vis_attr(meta)?;
 
                         return Ok(());
                     }
