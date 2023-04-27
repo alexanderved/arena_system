@@ -1,8 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::{
-    parenthesized, parse::Result, parse_quote, spanned::Spanned, Field, Ident, Token, Type,
-    VisRestricted, Visibility,
+    parenthesized, parse::Result, parse_quote, spanned::Spanned, Field, Ident, Lifetime, Token,
+    Type, VisRestricted, Visibility,
 };
 
 pub struct Getter {
@@ -13,12 +13,13 @@ pub struct Getter {
 }
 
 impl Getter {
-    pub fn new(f: &Field) -> Result<Getter> {
+    pub fn new(f: &Field, lifetime: &Lifetime) -> Result<Getter> {
         let field_ident = f.ident.clone().expect("Structs with unnamed fields are not supported");
         let field_ty = &f.ty;
         let field_ty_span = field_ty.span();
 
-        let mut return_ty: Type = parse_quote!(Option<arena_system::ElementRef<'arena, #field_ty>>);
+        let mut return_ty: Type =
+            parse_quote!(Option<arena_system::ElementRef<#lifetime, #field_ty>>);
         let mut fn_body = quote_spanned! { field_ty_span =>
             use arena_system::Handle;
             self.get()
@@ -83,7 +84,7 @@ impl Getter {
                         match return_ident.to_string().as_str() {
                             "reference" => {
                                 return_ty = parse_quote!(
-                                    Option<arena_system::ElementRef<'arena, #field_ty>>
+                                    Option<arena_system::ElementRef<#lifetime, #field_ty>>
                                 );
                                 fn_body = quote_spanned! { field_ty_span =>
                                     use arena_system::Handle;
@@ -91,9 +92,7 @@ impl Getter {
                                         .ok()
                                         .map(|this_ref| arena_system::ElementRef::map(
                                             this_ref,
-                                            |this| {
-                                                &this.#field_ident
-                                            }
+                                            |this| &this.#field_ident,
                                         ))
                                 };
                             }

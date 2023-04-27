@@ -1,15 +1,15 @@
 extern crate proc_macro;
 
 mod getter;
-mod handleable;
 mod handle;
+mod handleable;
 mod util;
 
-use handleable::*;
-use handle::*;
+use handle::HandleInfo;
+use handleable::HandleableInfo;
 
-use syn::{parse_macro_input, DeriveInput};
 use quote::quote;
+use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(Handleable, attributes(handle_getter))]
 pub fn derive_handleable(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

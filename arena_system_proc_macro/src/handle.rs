@@ -1,6 +1,6 @@
-use crate::getter::*;
-use crate::handleable::*;
-use crate::util::*;
+use crate::getter::Getter;
+use crate::handleable::HandleableInfo;
+use crate::util::iter_generics;
 
 use std::collections::HashMap;
 
@@ -22,18 +22,9 @@ impl<'a> HandleInfo<'a> {
         Self {
             handleable: handleable_info,
             vis: &handleable_info.vis,
-            ident: &handleable_info.handle_ident, 
+            ident: &handleable_info.handle_ident,
             userdata: None,
         }
-    }
-
-    pub fn to_type(&self) -> Type {
-        let HandleInfo { handleable, ident, .. } = self;
-
-        let lifetime = &handleable.lifetime;
-        let (_, ty_generics, _) = iter_generics(&handleable.generics);
-
-        parse_quote!(#ident < #lifetime, #( #ty_generics ),* >)
     }
 
     pub fn quote(self) -> Result<TokenStream> {
@@ -75,7 +66,16 @@ impl<'a> HandleInfo<'a> {
         })
     }
 
-    pub fn handle_decl(&self) -> TokenStream {
+    fn to_type(&self) -> Type {
+        let HandleInfo { handleable, ident, .. } = self;
+
+        let lifetime = &handleable.lifetime;
+        let (_, ty_generics, _) = iter_generics(&handleable.generics);
+
+        parse_quote!(#ident < #lifetime, #( #ty_generics ),* >)
+    }
+
+    fn handle_decl(&self) -> TokenStream {
         let HandleInfo { vis, ident, handleable, .. } = self;
 
         let lifetime = &handleable.lifetime;
@@ -91,7 +91,7 @@ impl<'a> HandleInfo<'a> {
         }
     }
 
-    pub fn getters(&self) -> Result<TokenStream> {
+    fn getters(&self) -> Result<TokenStream> {
         let lifetime = &self.handleable.lifetime;
         let (impl_generics, _, where_clause) = iter_generics(&self.handleable.generics);
         let handle_type = self.to_type();
@@ -101,7 +101,7 @@ impl<'a> HandleInfo<'a> {
             .fields
             .iter()
             .map(|f| {
-                let getter = Getter::new(f)?;
+                let getter = Getter::new(f, lifetime)?;
 
                 Ok(getter.quote())
             })

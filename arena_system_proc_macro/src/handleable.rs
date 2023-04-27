@@ -46,14 +46,6 @@ impl HandleableInfo {
         Self { vis, ident, generics, fields, handle_ident, lifetime }
     }
 
-    pub fn to_type(&self) -> Type {
-        let HandleableInfo { ident, generics, .. } = self;
-
-        let (_, ty_generics, _) = generics.split_for_impl();
-
-        parse_quote!(#ident #ty_generics)
-    }
-
     pub fn quote_impl(&self) -> TokenStream {
         let HandleableInfo { generics, handle_ident, lifetime, .. } = self;
 
@@ -67,5 +59,13 @@ impl HandleableInfo {
                 type Handle = #handle_ident <#lifetime, #( #generics_types ),*>;
             }
         }
+    }
+
+    pub fn to_type(&self) -> Type {
+        let HandleableInfo { ident, generics, .. } = self;
+
+        let (_, ty_generics, _) = generics.split_for_impl();
+
+        parse_quote!(#ident #ty_generics)
     }
 }
