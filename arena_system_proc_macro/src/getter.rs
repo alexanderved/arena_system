@@ -1,10 +1,10 @@
-use crate::util::{parse_name_attr, parse_vis_attr};
+use crate::util::{parse_name_attr, parse_vis_attr, unwrap_type};
 
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::{
     parenthesized, parse::Result, parse_quote, spanned::Spanned, Field, Ident, Lifetime, Type,
-    Visibility,
+    Visibility, Token,
 };
 
 pub struct Getter {
@@ -98,6 +98,31 @@ impl Getter {
                                         .map(|this_ref| this_ref.#field_ident)
                                 };
                             }
+                            "handle" => {
+                                let arena;
+                                parenthesized!(arena in return_type);
+
+                                let arena_ident = arena.parse::<Ident>()?;
+                                arena.parse::<Token![:]>()?;
+                                let arena_type = arena.parse::<Type>()?;
+                                let element_type = unwrap_type("Arena", &arena_type)?;
+
+                                return_ty = parse_quote!(
+                                    Option<
+                                        <#element_type as arena_system::Handleable<'arena>>::Handle
+                                    >
+                                );
+                                fn_body = quote_spanned! { field_ty_span =>
+                                    use arena_system::Handle;
+
+                                    self.get()
+                                        .ok()
+                                        .map(|this_ref| {
+                                            self.#arena_ident
+                                                .handle(this_ref.#field_ident.into(), None)
+                                        })
+                                };
+                            }
                             _ => return Err(meta.error("unrecognised return type")),
                         }
 
@@ -115,7 +140,7 @@ impl Getter {
         let Getter { vis, ident, return_ty, body } = self;
 
         quote! {
-            #vis fn #ident(&self) -> #return_ty {
+            #vis fn #ident(&'arena self) -> #return_ty {
                 #body
             }
         }

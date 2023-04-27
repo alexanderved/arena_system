@@ -56,6 +56,7 @@ impl<'a> HandleInfo<'a> {
                 ) -> Self {
                     Self {
                         __raw: raw,
+                        tests: arena_system::Arena::new(),
                     }
                 }
 
@@ -91,6 +92,7 @@ impl<'a> HandleInfo<'a> {
         quote! {
             #vis struct #ident <#lifetime, #( #handleable_generics_params ),*> #where_clause {
                 __raw: arena_system::RawHandle<#lifetime, #handleable_type>,
+                tests: arena_system::Arena<Test<24, u32>>,
             }
         }
     }
