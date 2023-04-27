@@ -29,41 +29,15 @@ impl<'a> HandleInfo<'a> {
     }
 
     pub fn quote(self) -> Result<TokenStream> {
-        let HandleInfo { handleable, .. } = self;
-
         let handle_decl = self.handle_decl();
-
-        let lifetime = &handleable.lifetime;
-        let (impl_generics, _, where_clause) = iter_generics(&handleable.generics);
-        let handleable_type = handleable.to_type();
-        let handle_type = self.to_type();
-
+        let handle_impl = self.handle_impl();
         let getters = self.getters()?;
         let setters = self.setters()?;
 
         Ok(quote! {
             #handle_decl
 
-            impl<#lifetime, #( #impl_generics ),*> arena_system::Handle<#lifetime>
-                for #handle_type #where_clause
-            {
-                type Type = #handleable_type;
-                type Userdata = arena_system::EmptyUserdata;
-
-                fn from_raw(
-                    raw: arena_system::RawHandle<#lifetime, Self::Type>,
-                    userdata: Self::Userdata
-                ) -> Self {
-                    Self {
-                        __raw: raw,
-                        tests: arena_system::Arena::new(),
-                    }
-                }
-
-                fn to_raw(&self) -> arena_system::RawHandle<#lifetime, Self::Type> {
-                    self.__raw
-                }
-            }
+            #handle_impl
 
             #getters
 
@@ -93,6 +67,36 @@ impl<'a> HandleInfo<'a> {
             #vis struct #ident <#lifetime, #( #handleable_generics_params ),*> #where_clause {
                 __raw: arena_system::RawHandle<#lifetime, #handleable_type>,
                 tests: arena_system::Arena<Test<24, u32>>,
+            }
+        }
+    }
+
+    fn handle_impl(&self) -> TokenStream {
+        let lifetime = &self.handleable.lifetime;
+        let (impl_generics, _, where_clause) = iter_generics(&self.handleable.generics);
+        let handleable_type = self.handleable.to_type();
+        let handle_type = self.to_type();
+
+        quote! {
+            impl<#lifetime, #( #impl_generics ),*> arena_system::Handle<#lifetime>
+                for #handle_type #where_clause
+            {
+                type Type = #handleable_type;
+                type Userdata = arena_system::EmptyUserdata;
+
+                fn from_raw(
+                    raw: arena_system::RawHandle<#lifetime, Self::Type>,
+                    userdata: Self::Userdata
+                ) -> Self {
+                    Self {
+                        __raw: raw,
+                        tests: arena_system::Arena::new(),
+                    }
+                }
+
+                fn to_raw(&self) -> arena_system::RawHandle<#lifetime, Self::Type> {
+                    self.__raw
+                }
             }
         }
     }
