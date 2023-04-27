@@ -162,6 +162,7 @@ impl<'a> HandleInfo<'a> {
     }
 
     fn getters(&self) -> Result<TokenStream> {
+        let lifetime = &self.handleable.lifetime;
         let getters = self
             .handleable
             .fields
@@ -171,7 +172,7 @@ impl<'a> HandleInfo<'a> {
                 let ty_span = ty.span();
                 let ident = &f.ident;
 
-                let mut return_ty = quote!(Option<arena_system::ElementRef<'arena, #ty>>);
+                let mut return_ty = quote!(Option<arena_system::ElementRef<#lifetime, #ty>>);
                 let mut fn_body = quote_spanned! { ty_span=>
                     use arena_system::Handle;
                     self.get()
@@ -226,6 +227,9 @@ impl<'a> HandleInfo<'a> {
                         if meta.path.is_ident("clone") {
                             return_ty = quote!(Option<#ty>);
                             fn_body = quote_spanned! { ty_span=>
+                                fn _static_assert_clone<_StaticAssertClone: Clone>() {}
+                                _static_assert_clone::<#ty>();
+
                                 use arena_system::Handle;
                                 self.get()
                                     .ok()
@@ -238,6 +242,9 @@ impl<'a> HandleInfo<'a> {
                         if meta.path.is_ident("copy") {
                             return_ty = quote!(Option<#ty>);
                             fn_body = quote_spanned! { ty_span=>
+                                fn _static_assert_copy<_StaticAssertCopy: Copy>() {}
+                                _static_assert_copy::<#ty>();
+
                                 use arena_system::Handle;
                                 self.get()
                                     .ok()
