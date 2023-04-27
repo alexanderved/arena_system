@@ -1,4 +1,5 @@
 use crate::getter::Getter;
+use crate::setter::Setter;
 use crate::handleable::HandleableInfo;
 use crate::util::iter_generics;
 
@@ -38,6 +39,7 @@ impl<'a> HandleInfo<'a> {
         let handle_type = self.to_type();
 
         let getters = self.getters()?;
+        let setters = self.setters()?;
 
         Ok(quote! {
             #handle_decl
@@ -63,6 +65,8 @@ impl<'a> HandleInfo<'a> {
             }
 
             #getters
+
+            #setters
         })
     }
 
@@ -111,6 +115,31 @@ impl<'a> HandleInfo<'a> {
             quote! {
                 impl<#lifetime, #( #impl_generics ),*> #handle_type #where_clause {
                     #( #getters )*
+                }
+            }
+        })
+    }
+
+    fn setters(&self) -> Result<TokenStream> {
+        let lifetime = &self.handleable.lifetime;
+        let (impl_generics, _, where_clause) = iter_generics(&self.handleable.generics);
+        let handle_type = self.to_type();
+
+        let setters = self
+            .handleable
+            .fields
+            .iter()
+            .map(|f| {
+                let setter = Setter::new(f)?;
+
+                Ok(setter.quote())
+            })
+            .collect::<Result<Vec<_>>>();
+
+        setters.map(|setters| {
+            quote! {
+                impl<#lifetime, #( #impl_generics ),*> #handle_type #where_clause {
+                    #( #setters )*
                 }
             }
         })
