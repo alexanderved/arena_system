@@ -9,7 +9,7 @@ mod a {
         where
             T: Clone + Copy,
         {
-            #[getter(name(test), vis(pub(in crate::a)), copy)]
+            #[handle_getter(name(test), vis(pub(in crate::a)), return_type(copy))]
             pub test_i32: T,
         }
     }
@@ -20,13 +20,7 @@ mod a {
         let mut test_arena: Arena<Test<42, i32>> = Arena::new();
         test_arena.add(Test { test_i32: 1 });
 
-        println!(
-            "{}",
-            test_arena
-                .handle(0i64.into(), None)
-                .test()
-                .unwrap()
-        );
+        println!("{:?}", test_arena.handle(0i64.into(), None).test().unwrap());
     }
 }
 

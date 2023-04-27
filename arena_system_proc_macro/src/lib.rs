@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned};
 use syn::{
-    parenthesized, parse::Result, parse_macro_input, parse_quote, punctuated::Punctuated, Data,
-    DeriveInput, Field, Fields, GenericParam, Generics, Ident, Lifetime, Token, Type,
-    VisRestricted, Visibility, WhereClause, spanned::Spanned,
+    parenthesized, parse::Result, parse_macro_input, parse_quote, punctuated::Punctuated,
+    spanned::Spanned, Data, DeriveInput, Field, Fields, GenericParam, Generics, Ident, Lifetime,
+    Token, Type, VisRestricted, Visibility, WhereClause,
 };
 
 #[derive(Debug, Clone)]
@@ -172,7 +172,8 @@ impl<'a> HandleInfo<'a> {
                 let ty_span = ty.span();
                 let ident = &f.ident;
 
-                let mut return_ty = quote!(Option<arena_system::ElementRef<#lifetime, #ty>>);
+                let mut return_ty: Type =
+                    parse_quote!(Option<arena_system::ElementRef<#lifetime, #ty>>);
                 let mut fn_body = quote_spanned! { ty_span=>
                     use arena_system::Handle;
                     self.get()
@@ -188,75 +189,102 @@ impl<'a> HandleInfo<'a> {
                 let mut fn_ident = ident.clone();
                 let mut fn_vis = f.vis.clone();
 
-                f.attrs.iter().filter(|a| a.path().is_ident("getter")).try_for_each(|a| {
-                    a.parse_nested_meta(|meta| {
-                        if meta.path.is_ident("name") {
-                            let content;
-                            parenthesized!(content in meta.input);
-                            fn_ident = content.parse().ok();
+                f.attrs
+                    .iter()
+                    .filter(|a| a.path().is_ident("handle_getter"))
+                    .try_for_each(|a| {
+                        a.parse_nested_meta(|meta| {
+                            if meta.path.is_ident("name") {
+                                let name;
+                                parenthesized!(name in meta.input);
+                                fn_ident = name.parse().ok();
 
-                            return Ok(());
-                        }
-
-                        if meta.path.is_ident("vis") {
-                            let vis;
-                            parenthesized!(vis in meta.input);
-
-                            if vis.peek(Token![priv]) {
-                                vis.parse::<Token![priv]>()?;
-                                fn_vis = Visibility::Inherited;
-                            } else if vis.peek(Token![pub]) {
-                                if vis.peek2(syn::token::Paren) {
-                                    let path;
-
-                                    fn_vis = Visibility::Restricted(VisRestricted {
-                                        pub_token: vis.parse::<Token![pub]>()?,
-                                        paren_token: parenthesized!(path in vis),
-                                        in_token: path.parse::<Token![in]>().ok(),
-                                        path: path.parse::<Box<syn::Path>>()?,
-                                    });
-                                } else {
-                                    let pub_token = vis.parse::<Token![pub]>()?;
-                                    fn_vis = Visibility::Public(pub_token);
-                                }
+                                return Ok(());
                             }
 
-                            return Ok(());
-                        }
+                            if meta.path.is_ident("vis") {
+                                let vis;
+                                parenthesized!(vis in meta.input);
 
-                        if meta.path.is_ident("clone") {
-                            return_ty = quote!(Option<#ty>);
-                            fn_body = quote_spanned! { ty_span=>
-                                fn _static_assert_clone<_StaticAssertClone: Clone>() {}
-                                _static_assert_clone::<#ty>();
+                                if vis.peek(Token![priv]) {
+                                    vis.parse::<Token![priv]>()?;
+                                    fn_vis = Visibility::Inherited;
+                                } else if vis.peek(Token![pub]) {
+                                    if vis.peek2(syn::token::Paren) {
+                                        let path;
 
-                                use arena_system::Handle;
-                                self.get()
-                                    .ok()
-                                    .map(|this_ref| this_ref.#ident.clone())
-                            };
-                            
-                            return Ok(());
-                        }
+                                        fn_vis = Visibility::Restricted(VisRestricted {
+                                            pub_token: vis.parse::<Token![pub]>()?,
+                                            paren_token: parenthesized!(path in vis),
+                                            in_token: path.parse::<Token![in]>().ok(),
+                                            path: path.parse::<Box<syn::Path>>()?,
+                                        });
+                                    } else {
+                                        let pub_token = vis.parse::<Token![pub]>()?;
+                                        fn_vis = Visibility::Public(pub_token);
+                                    }
+                                } else {
+                                    return Err(meta.error("unrecognised visiility level"));
+                                }
 
-                        if meta.path.is_ident("copy") {
-                            return_ty = quote!(Option<#ty>);
-                            fn_body = quote_spanned! { ty_span=>
-                                fn _static_assert_copy<_StaticAssertCopy: Copy>() {}
-                                _static_assert_copy::<#ty>();
+                                return Ok(());
+                            }
 
-                                use arena_system::Handle;
-                                self.get()
-                                    .ok()
-                                    .map(|this_ref| this_ref.#ident)
-                            };
-                            
-                            return Ok(());
-                        }
+                            if meta.path.is_ident("return_type") {
+                                let return_type;
+                                parenthesized!(return_type in meta.input);
 
-                        Err(meta.error("unrecognised getter attribute"))
-                    })
-                })?;
+                                let return_ident = return_type.parse::<Ident>()?;
+                                match return_ident.to_string().as_str() {
+                                    "reference" => {
+                                        return_ty = parse_quote!(
+                                            Option<arena_system::ElementRef<#lifetime, #ty>>
+                                        );
+                                        fn_body = quote_spanned! { ty_span=>
+                                            use arena_system::Handle;
+                                            self.get()
+                                                .ok()
+                                                .map(|this_ref| arena_system::ElementRef::map(
+                                                    this_ref,
+                                                    |this| {
+                                                        &this.#ident
+                                                    }
+                                                ))
+                                        };
+                                    }
+                                    "clone" => {
+                                        return_ty = parse_quote!(Option<#ty>);
+                                        fn_body = quote_spanned! { ty_span=>
+                                            fn _static_assert_clone<_StaticAssertClone: Clone>() {}
+                                            _static_assert_clone::<#ty>();
+
+                                            use arena_system::Handle;
+                                            self.get()
+                                                .ok()
+                                                .map(|this_ref| this_ref.#ident.clone())
+                                        };
+                                    }
+                                    "copy" => {
+                                        return_ty = parse_quote!(Option<#ty>);
+                                        fn_body = quote_spanned! { ty_span=>
+                                            fn _static_assert_copy<_StaticAssertCopy: Copy>() {}
+                                            _static_assert_copy::<#ty>();
+
+                                            use arena_system::Handle;
+                                            self.get()
+                                                .ok()
+                                                .map(|this_ref| this_ref.#ident)
+                                        };
+                                    }
+                                    _ => return Err(meta.error("unrecognised return type")),
+                                }
+
+                                return Ok(());
+                            }
+
+                            Err(meta.error("unrecognised getter attribute"))
+                        })
+                    })?;
 
                 Ok(quote! {
                     #fn_vis fn #fn_ident(&self) -> #return_ty {
@@ -298,7 +326,7 @@ fn iter_generics(
     (impl_generics.into_iter(), ty_generics.into_iter(), where_clause)
 }
 
-#[proc_macro_derive(Handleable, attributes(getter))]
+#[proc_macro_derive(Handleable, attributes(handle_getter))]
 pub fn derive_handleable(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let handleable_info = HandleableInfo::parse(input);
