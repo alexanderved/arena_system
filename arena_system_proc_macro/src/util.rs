@@ -1,4 +1,4 @@
-use syn::{Generics, GenericParam, WhereClause};
+use syn::{GenericParam, Generics, WhereClause};
 
 pub fn iter_generics(
     generics: &Generics,

@@ -1,106 +1,36 @@
 extern crate proc_macro;
 
-mod util;
 mod getter;
+mod handleable;
+mod util;
 
-use util::*;
 use getter::*;
+use handleable::*;
+use util::*;
 
 use std::collections::HashMap;
 
-use proc_macro2::{Span, TokenStream};
-use quote::{format_ident, quote};
-use syn::{
-    parse::Result, parse_macro_input, parse_quote, punctuated::Punctuated,
-    Data, DeriveInput, Field, Fields, GenericParam, Generics, Ident, Lifetime,
-    Token, Type, Visibility,
-};
-
-#[derive(Debug, Clone)]
-struct HandleableInfo {
-    vis: Visibility,
-    ident: Ident,
-    lifetime: Lifetime,
-    generics: Generics,
-    fields: Punctuated<Field, Token![,]>,
-}
-
-impl HandleableInfo {
-    fn parse(input: syn::DeriveInput) -> Self {
-        let DeriveInput { vis, ident, mut generics, data, .. } = input;
-
-        let fields = match data {
-            Data::Struct(struct_data) => match struct_data.fields {
-                Fields::Named(fields_named) => fields_named.named,
-                Fields::Unnamed(_) => {
-                    unimplemented!("Structs with unnamed fields are not supported")
-                }
-                Fields::Unit => unimplemented!("Unit structs are not supported"),
-            },
-            Data::Enum(_) => unimplemented!("Enums are not supported"),
-            Data::Union(_) => unimplemented!("Unions are not supported"),
-        };
-
-        let lifetime = Lifetime::new("'arena", Span::call_site());
-        generics.params.iter_mut().for_each(|g| {
-            if let GenericParam::Type(ref mut t) = g {
-                t.bounds.push(syn::TypeParamBound::Lifetime(lifetime.clone()));
-            }
-        });
-
-        Self { vis, ident, lifetime, generics, fields }
-    }
-
-    fn to_type(&self) -> Type {
-        let HandleableInfo { ident, generics, .. } = self;
-
-        let (_, ty_generics, _) = generics.split_for_impl();
-
-        parse_quote!(#ident #ty_generics)
-    }
-
-    fn quote_impl(&self) -> TokenStream {
-        let HandleableInfo { ident, generics, lifetime, .. } = self;
-
-        let handleable_type = self.to_type();
-
-        let where_clause = &generics.where_clause;
-        let impl_generics = generics.params.iter();
-
-        let generics_types = impl_generics.clone().map(|g| match g {
-            GenericParam::Type(t) => &t.ident,
-            GenericParam::Const(c) => &c.ident,
-            GenericParam::Lifetime(_) => unimplemented!(),
-        });
-
-        let handle_ident = format_ident!("{}Handle", ident);
-
-        quote! {
-            impl<#lifetime, #( #impl_generics ),*> arena_system::Handleable<#lifetime>
-                for #handleable_type #where_clause
-            {
-                type Handle = #handle_ident <#lifetime, #( #generics_types ),*>;
-            }
-        }
-    }
-}
+use proc_macro2::TokenStream;
+use quote::quote;
+use syn::{parse::Result, parse_macro_input, parse_quote, DeriveInput, Ident, Type, Visibility};
 
 struct HandleInfo<'a> {
     handleable: &'a HandleableInfo,
 
-    vis: Visibility,
-    ident: Ident,
+    vis: &'a Visibility,
+    ident: &'a Ident,
     #[allow(unused)]
     userdata: Option<HashMap<Ident, Type>>,
 }
 
 impl<'a> HandleInfo<'a> {
     fn parse(handleable_info: &'a HandleableInfo) -> Self {
-        let HandleableInfo { vis, ident, .. } = handleable_info;
-
-        let handle_ident = format_ident!("{}Handle", ident);
-
-        Self { handleable: handleable_info, vis: vis.clone(), ident: handle_ident, userdata: None }
+        Self {
+            handleable: handleable_info,
+            vis: &handleable_info.vis,
+            ident: &handleable_info.handle_ident, 
+            userdata: None,
+        }
     }
 
     fn to_type(&self) -> Type {

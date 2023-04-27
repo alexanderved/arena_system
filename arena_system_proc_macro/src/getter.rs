@@ -1,8 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::{
-    Visibility, Ident, Type, Field, spanned::Spanned, parse_quote, 
-    parenthesized, Token, VisRestricted, parse::Result,
+    parenthesized, parse::Result, parse_quote, spanned::Spanned, Field, Ident, Token, Type,
+    VisRestricted, Visibility,
 };
 
 pub struct Getter {
@@ -14,13 +14,11 @@ pub struct Getter {
 
 impl Getter {
     pub fn new(f: &Field) -> Result<Getter> {
-        let field_ident = f.ident.clone()
-            .expect("Structs with unnamed fields are not supported");
+        let field_ident = f.ident.clone().expect("Structs with unnamed fields are not supported");
         let field_ty = &f.ty;
         let field_ty_span = field_ty.span();
 
-        let mut return_ty: Type =
-            parse_quote!(Option<arena_system::ElementRef<'arena, #field_ty>>);
+        let mut return_ty: Type = parse_quote!(Option<arena_system::ElementRef<'arena, #field_ty>>);
         let mut fn_body = quote_spanned! { field_ty_span =>
             use arena_system::Handle;
             self.get()
@@ -133,12 +131,7 @@ impl Getter {
                 })
             })?;
 
-        Ok(Getter {
-            vis: fn_vis,
-            ident: fn_ident,
-            return_ty,
-            body: fn_body,
-        })
+        Ok(Getter { vis: fn_vis, ident: fn_ident, return_ty, body: fn_body })
     }
 
     pub fn quote(self) -> TokenStream {
